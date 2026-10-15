@@ -1,0 +1,10 @@
+MSP Tracker
+
+Double-click MSP Tracker to start it. It opens in its own window, and stops when you close the window.
+
+Your information is saved in the Data folder, which appears here after the first run.
+To back up, copy the whole MSP Tracker folder. To remove it, delete the folder.
+
+The first time you open it, your computer will warn you that the app isn't from a known
+developer. The steps to get past that are on the download page:
+https://github.com/invisi101/MSPtracker#install

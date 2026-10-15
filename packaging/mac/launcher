@@ -1,0 +1,78 @@
+#!/bin/bash
+# MSP Tracker launcher for macOS. Lives at "MSP Tracker/MSP Tracker.app/Contents/MacOS/launcher".
+#
+# Starts the app's server (bundled Node, nothing installed on the Mac), opens it in its own
+# window, and waits. The server stops itself a few seconds after the window closes (see
+# src/lib/server/lifetime.js), and the launcher then closes the browser instance it started.
+# Everything the app stores goes in the Data folder next to the app.
+
+CONTENTS="$(cd "$(dirname "$0")/.." && pwd)"
+RES="$CONTENTS/Resources"
+ROOT="$(cd "$CONTENTS/../.." && pwd)"
+PORT=7797
+URL="http://localhost:$PORT"
+
+say() { osascript -e "display dialog \"$1\" with title \"MSP Tracker\" buttons {\"OK\"} default button 1 with icon caution" >/dev/null 2>&1; }
+
+# macOS runs a downloaded, unsigned app from a hidden read-only copy until it has been moved
+# ("App Translocation"). The Data folder can't live there.
+case "$ROOT" in
+  */AppTranslocation/*)
+    say "MSP Tracker needs one more step before its first run.\n\nIn Finder, drag the MSP Tracker app out of its folder onto your Desktop, then drag it back into the folder. Then open it again."
+    exit 1 ;;
+esac
+
+DATA="$ROOT/Data"
+mkdir -p "$DATA" 2>/dev/null || { say "MSP Tracker can't create its Data folder in $ROOT. Move the MSP Tracker folder somewhere you can save files, like Documents."; exit 1; }
+
+# Pick the build for this Mac's chip. Under Rosetta uname says x86_64 on an Apple Silicon Mac.
+ARCH=x64
+if [ "$(uname -m)" = "arm64" ] || [ "$(sysctl -n sysctl.proc_translated 2>/dev/null)" = "1" ]; then ARCH=arm64; fi
+RT="$RES/runtime/$ARCH"
+
+healthy() { curl -fsS --max-time 1 "$URL/health" 2>/dev/null | grep -q '"app":"msp-tracker"'; }
+
+SERVER=""
+if ! healthy; then
+  if curl -s --max-time 1 -o /dev/null "$URL" 2>/dev/null; then
+    say "Something else on this Mac is already using port $PORT, so MSP Tracker can't start."
+    exit 1
+  fi
+  MSP_DESKTOP=1 NODE_ENV=production PORT=$PORT HOST=127.0.0.1 ORIGIN="$URL" DATA_DIR="$DATA" \
+  BODY_SIZE_LIMIT=20M MSP_SQLITE_BINDING="$RT/better_sqlite3.node" \
+    "$RT/node" "$RES/app/build" >>"$DATA/msp-tracker.log" 2>&1 &
+  SERVER=$!
+  for _ in $(seq 1 80); do healthy && break; sleep 0.25; done
+  if ! healthy; then
+    say "MSP Tracker didn't start. The details are in Data/msp-tracker.log."
+    kill "$SERVER" 2>/dev/null
+    exit 1
+  fi
+fi
+
+# Its own window: a Chromium browser in app mode with its own profile inside Data, so nothing is
+# written to the user's normal browser. Without one, the default browser opens a tab instead.
+BROWSER=""
+for b in "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+         "$HOME/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+         "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge" \
+         "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"; do
+  if [ -x "$b" ]; then BROWSER="$b"; break; fi
+done
+
+if [ -n "$BROWSER" ]; then
+  "$BROWSER" --user-data-dir="$DATA/Browser" --app="$URL" --no-first-run --no-default-browser-check \
+    >/dev/null 2>&1 &
+  WINDOW=$!
+else
+  open "$URL"
+  WINDOW=""
+fi
+
+# Only the launcher that started the server waits for it. On a Mac, closing a window doesn't
+# quit the browser, so once the server has stopped, quit the instance opened above.
+if [ -n "$SERVER" ]; then
+  wait "$SERVER"
+  [ -n "$WINDOW" ] && kill "$WINDOW" 2>/dev/null
+fi
+exit 0

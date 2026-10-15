@@ -1,0 +1,91 @@
+# Builds the Mac and Windows downloads, checks each one starts on a real Mac and Windows machine,
+# then publishes them on the Releases page. Runs when a version tag is pushed: git tag v1.0.0 && git push --tags
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.24' }
+      - run: pip install --quiet pillow
+      - name: Build both downloads
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          [ "$GITHUB_REF_TYPE" = tag ] || VERSION="0.0.0-test"
+          packaging/build-release.sh "$VERSION"
+      - uses: actions/upload-artifact@v4
+        with: { name: downloads, path: dist/*.zip }
+
+  check-mac:
+    needs: build
+    runs-on: macos-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: downloads }
+      - name: The app starts on Apple Silicon (and on Intel, under Rosetta)
+        run: |
+          ditto -x -k MSP-Tracker-mac.zip .
+          R="MSP Tracker/MSP Tracker.app/Contents/Resources"
+          test -x "MSP Tracker/MSP Tracker.app/Contents/MacOS/launcher"
+          for a in arm64 x64; do
+            run=""; [ $a = x64 ] && { /usr/bin/arch -x86_64 /usr/bin/true 2>/dev/null || { echo "no Rosetta, skipping x64"; continue; }; run="/usr/bin/arch -x86_64"; }
+            mkdir -p "data-$a"
+            MSP_DESKTOP=1 PORT=7797 HOST=127.0.0.1 ORIGIN=http://localhost:7797 DATA_DIR="$PWD/data-$a" \
+            MSP_SQLITE_BINDING="$PWD/$R/runtime/$a/better_sqlite3.node" $run "$R/runtime/$a/node" "$R/app/build" &
+            pid=$!
+            for i in $(seq 1 60); do curl -fsS http://localhost:7797/health && break; sleep 1; done
+            curl -fsS http://localhost:7797/health | grep -q '"app":"msp-tracker"'
+            curl -fsS -o /dev/null -w '%{http_code}\n' http://localhost:7797/welcome | grep -q 200
+            test -f "data-$a/tracker.db"
+            curl -fsS -X POST 'http://localhost:7797/api/alive?bye'
+            wait $pid; echo "$a: started, created its database, stopped on goodbye"
+          done
+
+  check-windows:
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: downloads }
+      - name: The launcher starts the app
+        shell: pwsh
+        run: |
+          Expand-Archive MSP-Tracker-windows.zip -DestinationPath .
+          Start-Process -FilePath ".\MSP Tracker\MSP Tracker.exe"
+          $ok = $false
+          for ($i = 0; $i -lt 60; $i++) {
+            try { $r = Invoke-RestMethod http://localhost:7797/health; if ($r.app -eq 'msp-tracker') { $ok = $true; break } } catch {}
+            Start-Sleep 1
+          }
+          if (-not $ok) { Get-Content ".\MSP Tracker\Data\msp-tracker.log" -ErrorAction SilentlyContinue; throw 'MSP did not start' }
+          if ((Invoke-WebRequest http://localhost:7797/welcome -UseBasicParsing).StatusCode -ne 200) { throw 'welcome page failed' }
+          if (-not (Test-Path ".\MSP Tracker\Data\tracker.db")) { throw 'no database in Data' }
+          Invoke-WebRequest -Method Post -ContentType 'application/json' 'http://localhost:7797/api/alive?bye' -UseBasicParsing | Out-Null
+          Start-Sleep 10
+          try { Invoke-RestMethod http://localhost:7797/health; throw 'still running after goodbye' } catch { 'stopped on goodbye' }
+
+  publish:
+    needs: [check-mac, check-windows]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: downloads }
+      - name: Publish the release
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          gh release create "$GITHUB_REF_NAME" MSP-Tracker-mac.zip MSP-Tracker-windows.zip -R "$GITHUB_REPOSITORY" \
+            --title "MSP Tracker $GITHUB_REF_NAME" \
+            --notes "Download **MSP-Tracker-mac.zip** for a Mac or **MSP-Tracker-windows.zip** for Windows. Install steps: https://github.com/$GITHUB_REPOSITORY#install"
