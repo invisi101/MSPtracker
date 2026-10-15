@@ -6,7 +6,7 @@
   //   onpick — called with a standard name when the user takes a suggestion
   //   muscle — bindable: what a NEW exercise mainly works. Asked, never guessed from the name.
   import { MUSCLE_CHOICES } from '$lib/muscle-choices.js';
-  let { match, value, onpick, muscle = $bindable('') } = $props();
+  let { match, value, onpick, muscle = $bindable() } = $props();
 
   const m = $derived(match(value));
 </script>

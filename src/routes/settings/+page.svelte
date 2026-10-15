@@ -107,7 +107,7 @@
   let prog = $derived(data.programme);
   let openDay = $state(null);
   let df = $state({ name: '', title: '', week_from: '', week_to: '', exercises: [] });
-  const blankEx = () => ({ name: '', sets: '', rep_low: '', rep_high: '', rir: '', rest: '', note: '' });
+  const blankEx = () => ({ name: '', sets: '', rep_low: '', rep_high: '', rir: '', rest: '', note: '', muscle: '' });
   function editDay(d) {
     openDay = d.id;
     df = {
@@ -118,7 +118,7 @@
         rep_high: e.rep_high ?? '', rir: e.rir ?? '', rest: e.rest ?? '', note: e.note ?? '',
         // Carried through untouched so saving a day keeps hand-tuned muscle lists and slots.
         // origName lets the server tell a kept exercise from one swapped for another.
-        muscles: e.muscles ?? null, slot: e.slot ?? null, origName: e.name ?? ''
+        muscles: e.muscles ?? null, slot: e.slot ?? null, origName: e.name ?? '', muscle: ''
       }))
     };
   }
