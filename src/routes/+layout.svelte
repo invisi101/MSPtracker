@@ -42,10 +42,29 @@
   <header bind:clientHeight={headerH} class="sticky top-0 z-20 bg-[var(--color-bg)]/90 backdrop-blur border-b border-[var(--color-border)]"
           style="padding-top: env(safe-area-inset-top)">
     <div class="max-w-2xl mx-auto px-4 h-13 flex items-center gap-2 py-2.5">
-      <svg viewBox="0 0 64 64" class="w-7 h-7 shrink-0">
-        <path d="M32 12 L52 50 H12 Z" fill="none" stroke="var(--color-accent)" stroke-width="4" stroke-linejoin="round"/>
-        <path d="M22 40 H42" stroke="var(--color-accent-2)" stroke-width="4" stroke-linecap="round"/>
-        <path d="M27 30 H37" stroke="var(--color-accent-2)" stroke-width="4" stroke-linecap="round"/>
+      <svg viewBox="0 0 512 512" class="w-7 h-7 shrink-0" aria-hidden="true">
+      <defs>
+        <linearGradient id="hdr-plate" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fcd34d"/><stop offset="0.55" stop-color="#f59e0b"/><stop offset="1" stop-color="#c2410c"/></linearGradient>
+        <linearGradient id="hdr-steel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f8fafc"/><stop offset="0.5" stop-color="#cbd5e1"/><stop offset="1" stop-color="#64748b"/></linearGradient>
+        <linearGradient id="hdr-collar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7dd3fc"/><stop offset="1" stop-color="#0284c7"/></linearGradient>
+      </defs>
+        
+        <path d="M 44 284 Q 256 212 468 284" fill="none" stroke="url(#hdr-steel)" stroke-width="22" stroke-linecap="round"/>
+        <rect x="224" y="237" width="5" height="22" fill="#475569" opacity="0.55"/><rect x="238" y="237" width="5" height="22" fill="#475569" opacity="0.55"/><rect x="269" y="237" width="5" height="22" fill="#475569" opacity="0.55"/><rect x="283" y="237" width="5" height="22" fill="#475569" opacity="0.55"/>
+        <g transform="translate(0 4) rotate(-9 150 256)">
+        <rect x="58" y="150" width="46" height="212" rx="13" fill="url(#hdr-plate)"/>
+        <rect x="108" y="104" width="58" height="304" rx="15" fill="url(#hdr-plate)"/>
+        <rect x="66" y="164" width="7" height="184" rx="3.5" fill="#fff7d6" opacity="0.55"/>
+        <rect x="117" y="120" width="8" height="272" rx="4" fill="#fff7d6" opacity="0.55"/>
+        <rect x="170" y="214" width="24" height="84" rx="7" fill="url(#hdr-collar)"/>
+        </g>
+        <g transform="translate(0 4) rotate(9 362 256)">
+        <rect x="408" y="150" width="46" height="212" rx="13" fill="url(#hdr-plate)"/>
+        <rect x="346" y="104" width="58" height="304" rx="15" fill="url(#hdr-plate)"/>
+        <rect x="439" y="164" width="7" height="184" rx="3.5" fill="#fff7d6" opacity="0.55"/>
+        <rect x="387" y="120" width="8" height="272" rx="4" fill="#fff7d6" opacity="0.55"/>
+        <rect x="318" y="214" width="24" height="84" rx="7" fill="url(#hdr-collar)"/>
+        </g>
       </svg>
       <span class="font-semibold tracking-tight text-lg text-[var(--color-text)]">MSP Tracker</span>
       

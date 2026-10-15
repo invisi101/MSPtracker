@@ -55,7 +55,7 @@ M="$WORK/mac/MSP Tracker/MSP Tracker.app/Contents"
 mkdir -p "$M/MacOS" "$M/Resources"
 sed "s/__VERSION__/$VERSION/g" "$HERE/mac/Info.plist" > "$M/Info.plist"
 cp "$HERE/mac/launcher" "$M/MacOS/launcher"; chmod +x "$M/MacOS/launcher"
-python3 -c "from PIL import Image; Image.open('$REPO/static/icon-512.png').convert('RGBA').save('$M/Resources/icon.icns')"
+python3 -c "from PIL import Image; Image.open('$REPO/static/icon-app.png').convert('RGBA').save('$M/Resources/icon.icns')"
 cp -r "$APP" "$M/Resources/app"
 for a in arm64 x64; do
   mkdir -p "$M/Resources/runtime/$a"
@@ -73,7 +73,7 @@ cp -r "$APP/." "$W/app/"
 unzip -qj "$CACHE/node-v$NODE_VERSION-win-x64.zip" "node-v$NODE_VERSION-win-x64/node.exe" -d "$W/app/runtime"
 cp "$(driver win32 x64)" "$W/app/runtime/better_sqlite3.node"
 (cd "$HERE/windows" && rm -f ./*.syso \
-  && go run github.com/tc-hib/go-winres@v0.3.3 simply --arch amd64 --icon "$SRC/static/icon-512.png" \
+  && go run github.com/tc-hib/go-winres@v0.3.3 simply --arch amd64 --icon "$SRC/static/icon-app.png" \
        --manifest gui --product-name "MSP Tracker" --file-description "MSP Tracker" --product-version "$VERSION" --file-version "$VERSION" \
   && GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "-H windowsgui -s -w" -o "$W/MSP Tracker.exe" . \
   && rm -f ./*.syso)
